@@ -33,11 +33,29 @@ class PriceScraper:
                     r'Currently:\s*\$[\d,]+\.?\d*'
                 ]
             },
+            'amazon_au': {
+                'search_url': 'https://www.amazon.com.au/s?k={query}',
+                'price_selectors': [
+                    r'\$[\d,]+\.?\d*',
+                    r'AUD\s*\$[\d,]+\.?\d*',
+                    r'Price:\s*\$[\d,]+\.?\d*',
+                    r'Currently:\s*\$[\d,]+\.?\d*'
+                ]
+            },
             'ebay': {
                 'search_url': 'https://www.ebay.com/sch/i.html?_nkw={query}',
                 'price_selectors': [
                     r'\$[\d,]+\.?\d*',
                     r'US\s*\$[\d,]+\.?\d*',
+                    r'Price:\s*\$[\d,]+\.?\d*'
+                ]
+            },
+            'ebay_au': {
+                'search_url': 'https://www.ebay.com.au/sch/i.html?_nkw={query}',
+                'price_selectors': [
+                    r'\$[\d,]+\.?\d*',
+                    r'AU\s*\$[\d,]+\.?\d*',
+                    r'AUD\s*\$[\d,]+\.?\d*',
                     r'Price:\s*\$[\d,]+\.?\d*'
                 ]
             },
@@ -55,6 +73,14 @@ class PriceScraper:
                     r'\$[\d,]+\.?\d*',
                     r'current price\s*\$[\d,]+\.?\d*',
                     r'reg\s*\$[\d,]+\.?\d*'
+                ]
+            },
+            'target_au': {
+                'search_url': 'https://www.target.com.au/s?searchTerm={query}',
+                'price_selectors': [
+                    r'\$[\d,]+\.?\d*',
+                    r'current price\s*\$[\d,]+\.?\d*',
+                    r'was\s*\$[\d,]+\.?\d*'
                 ]
             }
         }
@@ -211,6 +237,26 @@ class PriceScraper:
             print(f"Error searching {marketplace}: {e}")
             return []
     
+    def get_relevant_marketplaces(self, current_marketplace: str = None) -> list:
+        """Get relevant marketplaces to search based on current marketplace region."""
+        if not current_marketplace:
+            return list(self.marketplaces.keys())
+        
+        # If user is on Australian site, prioritize Australian marketplaces
+        if current_marketplace.endswith('_au'):
+            au_marketplaces = [k for k in self.marketplaces.keys() if k.endswith('_au')]
+            us_marketplaces = [k for k in self.marketplaces.keys() if not k.endswith('_au') and '_' not in k]
+            return au_marketplaces + us_marketplaces
+        
+        # If user is on US site, prioritize US marketplaces
+        elif current_marketplace in ['amazon', 'ebay', 'walmart', 'target']:
+            us_marketplaces = [k for k in self.marketplaces.keys() if not '_' in k]
+            au_marketplaces = [k for k in self.marketplaces.keys() if k.endswith('_au')]
+            return us_marketplaces + au_marketplaces
+        
+        # Default: return all marketplaces
+        return list(self.marketplaces.keys())
+
     def compare_prices(self, product_title: str, current_marketplace: str = None, current_price: str = None) -> dict:
         """Compare prices across all supported marketplaces."""
         results = {
@@ -221,8 +267,11 @@ class PriceScraper:
             'timestamp': time.time()
         }
         
-        # Search all marketplaces except the current one
-        for marketplace in self.marketplaces.keys():
+        # Get relevant marketplaces to search
+        relevant_marketplaces = self.get_relevant_marketplaces(current_marketplace)
+        
+        # Search relevant marketplaces except the current one
+        for marketplace in relevant_marketplaces:
             if marketplace != current_marketplace:
                 products = self.search_marketplace(
                     product_title, 

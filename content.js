@@ -105,13 +105,32 @@
           document.querySelector('.a-price') ||
           pathname.includes('/product/') ||
           pathname.includes('/item/')) {
-        return 'amazon';
+        
+        // Return specific marketplace based on domain
+        if (hostname.includes('amazon.com.au')) return 'amazon_au';
+        if (hostname.includes('amazon.co.uk')) return 'amazon_uk';
+        if (hostname.includes('amazon.ca')) return 'amazon_ca';
+        if (hostname.includes('amazon.de')) return 'amazon_de';
+        return 'amazon'; // Default to US Amazon
       }
     }
     
-    if (hostname.includes('ebay')) return 'ebay';
+    // eBay detection with regional variants
+    if (hostname.includes('ebay')) {
+      if (hostname.includes('ebay.com.au')) return 'ebay_au';
+      if (hostname.includes('ebay.co.uk')) return 'ebay_uk';
+      if (hostname.includes('ebay.ca')) return 'ebay_ca';
+      return 'ebay'; // Default to US eBay
+    }
+    
+    // Target detection with regional variants
+    if (hostname.includes('target')) {
+      if (hostname.includes('target.com.au')) return 'target_au';
+      return 'target'; // Default to US Target
+    }
+    
     if (hostname.includes('walmart')) return 'walmart';
-    if (hostname.includes('target')) return 'target';
+    
     return null;
   }
   

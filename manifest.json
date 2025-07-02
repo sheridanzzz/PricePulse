@@ -18,6 +18,7 @@
     "https://www.ebay.com.au/*",
     "https://www.walmart.com/*",
     "https://www.target.com/*",
+    "https://www.target.com.au/*",
     "http://localhost:8000/*"
   ],
   "background": {
@@ -34,7 +35,8 @@
         "https://www.ebay.com/itm/*",
         "https://www.ebay.com.au/itm/*",
         "https://www.walmart.com/ip/*",
-        "https://www.target.com/p/*"
+        "https://www.target.com/p/*",
+        "https://www.target.com.au/p/*"
       ],
       "js": ["content.js"],
       "run_at": "document_idle"

@@ -105,12 +105,22 @@ def get_marketplaces():
         'marketplaces': [
             {
                 'id': 'amazon',
-                'name': 'Amazon',
+                'name': 'Amazon US',
+                'supported': True
+            },
+            {
+                'id': 'amazon_au',
+                'name': 'Amazon AU',
                 'supported': True
             },
             {
                 'id': 'ebay',
-                'name': 'eBay',
+                'name': 'eBay US',
+                'supported': True
+            },
+            {
+                'id': 'ebay_au',
+                'name': 'eBay AU',
                 'supported': True
             },
             {
@@ -120,7 +130,12 @@ def get_marketplaces():
             },
             {
                 'id': 'target',
-                'name': 'Target',
+                'name': 'Target US',
+                'supported': True
+            },
+            {
+                'id': 'target_au',
+                'name': 'Target AU',
                 'supported': True
             }
         ]

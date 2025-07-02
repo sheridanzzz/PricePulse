@@ -75,10 +75,18 @@ function displayCurrentProduct(productData) {
 
 function getMarketplaceName(marketplace) {
   const names = {
-    'amazon': 'Amazon',
-    'ebay': 'eBay',
+    'amazon': 'Amazon US',
+    'amazon_au': 'Amazon AU',
+    'amazon_uk': 'Amazon UK',
+    'amazon_ca': 'Amazon CA',
+    'amazon_de': 'Amazon DE',
+    'ebay': 'eBay US',
+    'ebay_au': 'eBay AU',
+    'ebay_uk': 'eBay UK',
+    'ebay_ca': 'eBay CA',
     'walmart': 'Walmart',
-    'target': 'Target'
+    'target': 'Target US',
+    'target_au': 'Target AU'
   };
   return names[marketplace] || marketplace;
 }
