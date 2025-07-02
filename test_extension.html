@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Extension - Mock Amazon Product Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .product-container {
+            display: flex;
+            gap: 40px;
+            margin-top: 20px;
+        }
+        .product-image {
+            flex: 1;
+            text-align: center;
+        }
+        .product-image img {
+            max-width: 100%;
+            height: auto;
+        }
+        .product-details {
+            flex: 1;
+        }
+        #productTitle {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .a-price {
+            margin: 20px 0;
+        }
+        .a-price-current {
+            font-size: 28px;
+            color: #B12704;
+            font-weight: bold;
+        }
+        .features {
+            margin: 20px 0;
+        }
+        .features li {
+            margin: 5px 0;
+        }
+        .breadcrumb {
+            margin-bottom: 20px;
+            color: #666;
+        }
+        .breadcrumb a {
+            color: #0066c0;
+            text-decoration: none;
+        }
+        .badge {
+            background: #007bff;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="breadcrumb">
+        <a href="#">Home</a> › <a href="#">Electronics</a> › <a href="#">Smartphones</a> › Apple iPhone
+    </div>
+
+    <div class="product-container">
+        <div class="product-image">
+            <img id="landingImage" src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgdmlld0JveD0iMCAwIDMwMCAzMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIiByeD0iNDAiIGZpbGw9IiNmNWY1ZjUiLz4KPHN2ZyB4PSI3NSIgeT0iNzUiIHdpZHRoPSIxNTAiIGhlaWdodD0iMTUwIiB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9Im5vbmUiPgo8cGF0aCBkPSJNMTIgMjJDMTcuNTIyOCAyMiAyMiAxNy41MjI4IDIyIDEyQzIyIDYuNDc3MTUgMTcuNTIyOCAyIDEyIDJDNi40NzcxNSAyIDIgNi40NzcxNSAyIDEyQzIgMTcuNTIyOCA2LjQ3NzE1IDIyIDEyIDIyWiIgc3Ryb2tlPSIjNjY2IiBzdHJva2Utd2lkdGg9IjIiLz4KPHN2ZyB4PSI2IiB5PSI2IiB3aWR0aD0iMTIiIGhlaWdodD0iMTIiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSI+CjxwYXRoIGQ9Ik0xMiA2VjEyTDE2IDE0IiBzdHJva2U9IiM2NjYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+Cjwvc3ZnPgo8L3N2Zz4KPC9zdmc+" alt="iPhone 15 Pro" />
+        </div>
+        
+        <div class="product-details">
+            <h1 id="productTitle">Apple iPhone 15 Pro Max 256GB - Natural Titanium</h1>
+            
+            <div class="a-price">
+                <span class="a-price-current">
+                    <span class="a-price-amount">$1,199.00</span>
+                </span>
+            </div>
+            
+            <div class="badge">Amazon's Choice</div>
+            <div class="badge">FREE Shipping</div>
+            
+            <ul class="features">
+                <li>6.7-inch Super Retina XDR display with ProMotion technology</li>
+                <li>A17 Pro chip with 6-core GPU</li>
+                <li>Pro camera system with 48MP Main camera</li>
+                <li>256GB storage capacity</li>
+                <li>Natural Titanium finish</li>
+                <li>5G connectivity</li>
+            </ul>
+            
+            <div style="margin-top: 30px;">
+                <button style="background: #ff9900; color: white; padding: 12px 24px; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; margin-right: 10px;">
+                    Add to Cart
+                </button>
+                <button style="background: #ffa500; color: white; padding: 12px 24px; border: none; border-radius: 8px; font-size: 16px; cursor: pointer;">
+                    Buy Now
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Simulate Amazon's URL structure
+        window.history.replaceState({}, '', '/dp/B0CHX1W1XY/ref=sr_1_1?keywords=iphone+15+pro+max&qid=1703845200&sr=8-1');
+        
+        // Add some dynamic content loading to test the extension
+        setTimeout(() => {
+            console.log('Page loaded - Extension should detect this product');
+        }, 1000);
+    </script>
+</body>
+</html>

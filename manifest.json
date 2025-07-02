@@ -1,0 +1,48 @@
+{
+  "manifest_version": 3,
+  "name": "Price Comparison Extension",
+  "version": "1.0",
+  "description": "Compare product prices across multiple marketplaces to find the best deals",
+  "permissions": [
+    "activeTab",
+    "storage",
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://www.amazon.com/*",
+    "https://www.ebay.com/*",
+    "https://www.walmart.com/*",
+    "https://www.target.com/*",
+    "http://localhost:8000/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.amazon.com/*/dp/*",
+        "https://www.amazon.com/dp/*",
+        "https://www.ebay.com/itm/*",
+        "https://www.walmart.com/ip/*",
+        "https://www.target.com/p/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Compare Prices",
+    "default_icon": {
+      "16": "icons/icon16.svg",
+      "48": "icons/icon48.svg",
+      "128": "icons/icon128.svg"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.svg",
+    "48": "icons/icon48.svg",
+    "128": "icons/icon128.svg"
+  }
+}

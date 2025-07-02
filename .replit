@@ -1,0 +1,41 @@
+modules = ["python-3.11"]
+
+[nix]
+channel = "stable-24_05"
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Price Server"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "price_server"
+
+[[workflows.workflow]]
+name = "Price Server"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python price_server.py"
+waitForPort = 8000
+
+[[workflows.workflow]]
+name = "price_server"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "uv add flask flask-cors"
+
+[[ports]]
+localPort = 8000
+externalPort = 80
