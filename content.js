@@ -97,8 +97,14 @@
     
     // Amazon detection for all international domains
     if (hostname.includes('amazon')) {
-      // Check if this is actually a product page
-      if (pathname.includes('/dp/') || pathname.includes('/gp/product/')) {
+      // Check if this is actually a product page by looking for product indicators
+      if (pathname.includes('/dp/') || 
+          pathname.includes('/gp/product/') || 
+          document.querySelector('#productTitle') ||
+          document.querySelector('span#productTitle') ||
+          document.querySelector('.a-price') ||
+          pathname.includes('/product/') ||
+          pathname.includes('/item/')) {
         return 'amazon';
       }
     }
