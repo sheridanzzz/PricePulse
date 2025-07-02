@@ -10,7 +10,12 @@
   ],
   "host_permissions": [
     "https://www.amazon.com/*",
+    "https://www.amazon.com.au/*",
+    "https://www.amazon.co.uk/*",
+    "https://www.amazon.ca/*",
+    "https://www.amazon.de/*",
     "https://www.ebay.com/*",
+    "https://www.ebay.com.au/*",
     "https://www.walmart.com/*",
     "https://www.target.com/*",
     "http://localhost:8000/*"
@@ -21,9 +26,13 @@
   "content_scripts": [
     {
       "matches": [
-        "https://www.amazon.com/*/dp/*",
-        "https://www.amazon.com/dp/*",
+        "https://www.amazon.com/*",
+        "https://www.amazon.com.au/*",
+        "https://www.amazon.co.uk/*",
+        "https://www.amazon.ca/*",
+        "https://www.amazon.de/*",
         "https://www.ebay.com/itm/*",
+        "https://www.ebay.com.au/itm/*",
         "https://www.walmart.com/ip/*",
         "https://www.target.com/p/*"
       ],

@@ -9,7 +9,10 @@
         '#productTitle',
         '#title',
         '.product-title',
-        'h1.a-size-large'
+        'h1.a-size-large',
+        'h1[data-automation-id="product-title"]',
+        'span#productTitle',
+        '.a-size-large.product-title-word-break'
       ],
       price: [
         '.a-price-current .a-price-amount',
@@ -17,13 +20,19 @@
         '#priceblock_ourprice',
         '#priceblock_dealprice',
         '.a-size-medium.a-color-price',
-        '.a-price-range'
+        '.a-price-range',
+        '.a-offscreen',
+        'span.a-price-whole',
+        '.a-price.a-text-price.a-size-medium.apexPriceToPay .a-offscreen',
+        '.a-price-to-pay .a-price-amount'
       ],
       image: [
         '#landingImage',
         '#imgBlkFront',
         '.a-dynamic-image',
-        '.imgTagWrapper img'
+        '.imgTagWrapper img',
+        'img[data-old-hires]',
+        'img[data-a-dynamic-image]'
       ]
     },
     ebay: {
@@ -84,7 +93,16 @@
   
   function detectMarketplace() {
     const hostname = window.location.hostname.toLowerCase();
-    if (hostname.includes('amazon')) return 'amazon';
+    const pathname = window.location.pathname.toLowerCase();
+    
+    // Amazon detection for all international domains
+    if (hostname.includes('amazon')) {
+      // Check if this is actually a product page
+      if (pathname.includes('/dp/') || pathname.includes('/gp/product/')) {
+        return 'amazon';
+      }
+    }
+    
     if (hostname.includes('ebay')) return 'ebay';
     if (hostname.includes('walmart')) return 'walmart';
     if (hostname.includes('target')) return 'target';
@@ -144,20 +162,51 @@
   
   function extractProductData() {
     const marketplace = detectMarketplace();
+    console.log('Detected marketplace:', marketplace);
+    console.log('Current URL:', window.location.href);
+    
     if (!marketplace || !extractors[marketplace]) {
       console.log('Unsupported marketplace:', marketplace);
       return null;
     }
     
     const config = extractors[marketplace];
+    console.log('Using config for:', marketplace, config);
     
+    // Debug title extraction
+    console.log('Trying title selectors:', config.title);
     const title = extractText(config.title);
+    console.log('Extracted title:', title);
+    
+    // Debug price extraction  
+    console.log('Trying price selectors:', config.price);
     const rawPrice = extractText(config.price);
+    console.log('Raw price:', rawPrice);
     const price = cleanPrice(rawPrice);
+    console.log('Cleaned price:', price);
+    
+    // Debug image extraction
+    console.log('Trying image selectors:', config.image);
     const image = extractImage(config.image);
+    console.log('Extracted image:', image);
     
     if (!title) {
-      console.log('Could not extract product title');
+      console.log('Could not extract product title - checking page structure');
+      // Log all potential title elements for debugging
+      const allH1 = document.querySelectorAll('h1');
+      console.log('All H1 elements found:', Array.from(allH1).map(h1 => ({
+        text: h1.textContent?.trim(),
+        id: h1.id,
+        classes: h1.className
+      })));
+      
+      const allSpans = document.querySelectorAll('span[id*="title"], span[id*="Title"]');
+      console.log('All title-related spans:', Array.from(allSpans).map(span => ({
+        text: span.textContent?.trim(),
+        id: span.id,
+        classes: span.className
+      })));
+      
       return null;
     }
     
@@ -170,7 +219,7 @@
       extractedAt: Date.now()
     };
     
-    console.log('Extracted product data:', productData);
+    console.log('Successfully extracted product data:', productData);
     return productData;
   }
   
