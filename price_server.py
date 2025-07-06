@@ -137,6 +137,21 @@ def get_marketplaces():
                 'id': 'target_au',
                 'name': 'Target AU',
                 'supported': True
+            },
+            {
+                'id': 'jbhifi_au',
+                'name': 'JB Hi-Fi AU',
+                'supported': True
+            },
+            {
+                'id': 'thegoodguys_au',
+                'name': 'The Good Guys AU',
+                'supported': True
+            },
+            {
+                'id': 'mydeal_au',
+                'name': 'MyDeal AU',
+                'supported': True
             }
         ]
     })

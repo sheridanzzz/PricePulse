@@ -1,22 +1,53 @@
-import trafilatura
+import requests
+from bs4 import BeautifulSoup
 import re
 import json
 from urllib.parse import quote_plus, urljoin
 import time
 import random
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
+# Path to your ChromeDriver executable
+CHROMEDRIVER_PATH = '/Users/sheridangomes/PricePulse/chromedriver' # Adjust this path if you placed it elsewhere
 
-def get_website_text_content(url: str) -> str:
+def get_website_text_content(url: str, use_selenium: bool = False) -> str:
     """
-    Extract main text content from a website using trafilatura.
+    Extract main text content from a website using requests and BeautifulSoup.
     Returns cleaned text content that's easier to process.
     """
     try:
-        downloaded = trafilatura.fetch_url(url)
-        if downloaded:
-            text = trafilatura.extract(downloaded)
-            return text if text else ""
-        return ""
+        if use_selenium:
+            options = Options()
+            options.add_argument("--headless")
+            options.add_argument("--disable-gpu")
+            options.add_argument("--no-sandbox")
+            options.add_argument("window-size=1920x1080")
+            service = Service(CHROMEDRIVER_PATH)
+            driver = webdriver.Chrome(service=service, options=options)
+            driver.get(url)
+            # Wait for the body to be present
+            WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
+            content = driver.page_source
+            driver.quit()
+            return content
+        else:
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Accept-Encoding': 'gzip, deflate, br',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
+                'Connection': 'keep-alive',
+                'Upgrade-Insecure-Requests': '1',
+            }
+            response = requests.get(url, headers=headers)
+            if response.status_code == 200:
+                return response.text
+            return ""
     except Exception as e:
         print(f"Error extracting content from {url}: {e}")
         return ""
@@ -26,6 +57,7 @@ class PriceScraper:
     def __init__(self):
         self.marketplaces = {
             'amazon': {
+                'base_url': 'https://www.amazon.com',
                 'search_url': 'https://www.amazon.com/s?k={query}',
                 'price_selectors': [
                     r'\$[\d,]+\.?\d*',
@@ -34,6 +66,7 @@ class PriceScraper:
                 ]
             },
             'amazon_au': {
+                'base_url': 'https://www.amazon.com.au',
                 'search_url': 'https://www.amazon.com.au/s?k={query}',
                 'price_selectors': [
                     r'\$[\d,]+\.?\d*',
@@ -43,6 +76,7 @@ class PriceScraper:
                 ]
             },
             'ebay': {
+                'base_url': 'https://www.ebay.com',
                 'search_url': 'https://www.ebay.com/sch/i.html?_nkw={query}',
                 'price_selectors': [
                     r'\$[\d,]+\.?\d*',
@@ -51,6 +85,7 @@ class PriceScraper:
                 ]
             },
             'ebay_au': {
+                'base_url': 'https://www.ebay.com.au',
                 'search_url': 'https://www.ebay.com.au/sch/i.html?_nkw={query}',
                 'price_selectors': [
                     r'\$[\d,]+\.?\d*',
@@ -60,6 +95,7 @@ class PriceScraper:
                 ]
             },
             'walmart': {
+                'base_url': 'https://www.walmart.com',
                 'search_url': 'https://www.walmart.com/search?q={query}',
                 'price_selectors': [
                     r'\$[\d,]+\.?\d*',
@@ -68,6 +104,7 @@ class PriceScraper:
                 ]
             },
             'target': {
+                'base_url': 'https://www.target.com',
                 'search_url': 'https://www.target.com/s?searchTerm={query}',
                 'price_selectors': [
                     r'\$[\d,]+\.?\d*',
@@ -76,11 +113,40 @@ class PriceScraper:
                 ]
             },
             'target_au': {
+                'base_url': 'https://www.target.com.au',
                 'search_url': 'https://www.target.com.au/s?searchTerm={query}',
                 'price_selectors': [
                     r'\$[\d,]+\.?\d*',
                     r'current price\s*\$[\d,]+\.?\d*',
                     r'was\s*\$[\d,]+\.?\d*'
+                ]
+            },
+            'jbhifi_au': {
+                'base_url': 'https://www.jbhifi.com.au',
+                'search_url': 'https://www.jbhifi.com.au/search?query={query}',
+                'price_selectors': [
+                    r'\$[\d,]+\.?\d*',
+                    r'AUD\s*\$[\d,]+\.?\d*',
+                    r'Price:\s*\$[\d,]+\.?\d*',
+                    r'Now:\s*\$[\d,]+\.?\d*'
+                ]
+            },
+            'thegoodguys_au': {
+                'base_url': 'https://www.thegoodguys.com.au',
+                'search_url': 'https://www.thegoodguys.com.au/search?q={query}',
+                'price_selectors': [
+                    r'\$[\d,]+\.?\d*',
+                    r'AUD\s*\$[\d,]+\.?\d*',
+                    r'Price:\s*\$[\d,]+\.?\d*'
+                ]
+            },
+            'mydeal_au': {
+                'base_url': 'https://www.mydeal.com.au',
+                'search_url': 'https://www.mydeal.com.au/search?q={query}',
+                'price_selectors': [
+                    r'\$[\d,]+\.?\d*',
+                    r'AUD\s*\$[\d,]+\.?\d*',
+                    r'Price:\s*\$[\d,]+\.?\d*'
                 ]
             }
         }
@@ -90,17 +156,17 @@ class PriceScraper:
         if not title:
             return ""
         
-        # Remove common marketplace-specific terms
+        # Remove common marketplace-specific terms and generic descriptive words
+        stop_words = ['gaming', 'monitor', 'inches', 'curved', 'ultra', 'hd', 'hz', 'ms', 'amd', 'freesync', 'nvidia', 'g-sync', 'adaptive', 'sync', 'technology', 'oled', 'qhd', 'uhd', 'display', 'studio', 'portable', 'with', 'for', 'by', 'gen', 'inch']
         cleaned = re.sub(r'\b(amazon|ebay|walmart|target)\b', '', title, flags=re.IGNORECASE)
         
+        words = cleaned.split()
+        cleaned_words = [word for word in words if word.lower() not in stop_words]
+        cleaned = ' '.join(cleaned_words)
+
         # Remove extra whitespace and special characters
         cleaned = re.sub(r'[^\w\s-]', ' ', cleaned)
         cleaned = re.sub(r'\s+', ' ', cleaned).strip()
-        
-        # Take only the first part of very long titles
-        words = cleaned.split()
-        if len(words) > 8:
-            cleaned = ' '.join(words[:8])
         
         return cleaned
     
@@ -130,66 +196,98 @@ class PriceScraper:
         
         return prices
     
-    def extract_product_info_from_search(self, text: str, query: str) -> list:
-        """Extract product information from search results text."""
+    def extract_product_info_from_search(self, html_content: str, query: str, marketplace: str) -> list:
+        """Extract product information from search results HTML content."""
         products = []
-        
-        # Split text into sections (rough estimation for different products)
-        sections = text.split('\n\n')
-        
-        for section in sections[:5]:  # Limit to first 5 products
-            if len(section) < 50:  # Skip very short sections
-                continue
-            
-            # Look for product titles (lines with query terms)
-            lines = section.split('\n')
-            product_title = None
-            
-            for line in lines:
-                # Check if line contains query terms and looks like a title
-                query_words = query.lower().split()
-                line_lower = line.lower()
-                
-                if (any(word in line_lower for word in query_words) and 
-                    len(line) > 20 and len(line) < 200):
-                    product_title = line.strip()
-                    break
-            
-            if not product_title:
-                continue
-            
-            # Extract prices from this section
-            prices = []
-            price_patterns = [
-                r'\$[\d,]+\.?\d*',
-                r'Price:\s*\$[\d,]+\.?\d*',
-                r'[\d,]+\.?\d*\s*dollars?'
-            ]
-            
-            for pattern in price_patterns:
-                matches = re.findall(pattern, section, re.IGNORECASE)
-                for match in matches:
-                    price_str = re.sub(r'[^\d.,]', '', match)
-                    if price_str:
-                        try:
-                            price_value = float(price_str.replace(',', ''))
-                            if 1 <= price_value <= 10000:
-                                prices.append(f"${price_value:.2f}")
-                                break
-                        except ValueError:
-                            continue
-                if prices:
-                    break
-            
-            if prices:
+        soup = BeautifulSoup(html_content, 'html.parser', from_encoding="utf-8")
+
+        # Common selectors for product containers
+        product_containers = soup.find_all(['div', 'li', 'article'], class_=re.compile(r'product-card|product-item|search-result|item-card', re.I))
+
+        if not product_containers:
+            print(f"No generic product containers found for query: {query} on {marketplace}")
+            return []
+
+        for container in product_containers:
+            title_tag = container.find(['h2', 'h3', 'h4', 'a'], class_=re.compile(r'product-title|item-title|title', re.I))
+            price_tag = container.find(['span', 'div'], class_=re.compile(r'price|product-price|item-price', re.I))
+            link_tag = container.find('a', href=True)
+
+            title = title_tag.get_text(strip=True) if title_tag else None
+            price = price_tag.get_text(strip=True) if price_tag else None
+            url = urljoin(self.marketplaces[marketplace]['base_url'], link_tag['href']) if link_tag else None
+
+            if title and price and url:
                 products.append({
-                    'title': product_title,
-                    'price': prices[0],
-                    'availability': 'Available'
+                    'title': title,
+                    'price': price,
+                    'url': url,
+                    'image': ''  # Placeholder
                 })
-        
         return products
     
+    def _scrape_jbhifi(self, html_content: str) -> list:
+        """Scrape product information specifically from JB Hi-Fi search results."""
+        products = []
+        soup = BeautifulSoup(html_content, 'html.parser', from_encoding="utf-8")
+        
+        # Look for product tiles using the data-testid attribute
+        product_tiles = soup.find_all('div', attrs={'data-testid': 'product-card-content'})
+        
+        if not product_tiles:
+            print("No product tiles found for JB Hi-Fi with data-testid='product-card-content'.")
+            print(f"Raw HTML content for JB Hi-Fi (first 1000 chars):\n{html_content[:1000]}") # Debug print
+
+        for tile in product_tiles:
+            title_tag = tile.find('div', attrs={'data-testid': 'product-card-title'})
+            price_tag = tile.find('span', class_='PriceTag_actual__1eb7mu916')
+            link_tag = tile.find('a', class_='ProductCard_imageLink', href=True)
+            image_tag = tile.find('div', attrs={'data-testid': 'product-card-image-base'}).find('img')
+            
+            title = title_tag.get_text(strip=True) if title_tag else None
+            price = price_tag.get_text(strip=True) if price_tag else None
+            url = urljoin('https://www.jbhifi.com.au', link_tag['href']) if link_tag else None
+            image_url = image_tag['src'] if image_tag and 'src' in image_tag.attrs else ''
+
+            if title and price and url:
+                products.append({
+                    'title': title,
+                    'price': price,
+                    'url': url,
+                    'image': image_url
+                })
+        return products
+
+    def _scrape_thegoodguys(self, html_content: str) -> list:
+        """Scrape product information specifically from The Good Guys search results."""
+        products = []
+        soup = BeautifulSoup(html_content, 'html.parser', from_encoding="utf-8")
+        
+        product_tiles = soup.find_all('article', attrs={'data-testid': 'product-card'})
+        
+        if not product_tiles:
+            print("No product tiles found for The Good Guys.")
+
+        for tile in product_tiles:
+            title_tag = tile.find('h4', class_='_title_1pa96_41')
+            price_tag = tile.find('span', attrs={'data-price': 'true', 'data-testid': 'product-card-price-section-price'})
+            link_tag = tile.find('a', class_='_imageLink_1pa96_24', href=True)
+            image_tag = tile.find('a', class_='_imageLink_1pa96_24').find('img')
+            
+            title = title_tag.get_text(strip=True) if title_tag else None
+            price = price_tag.get_text(strip=True) if price_tag else None
+            url = urljoin('https://www.thegoodguys.com.au', link_tag['href']) if link_tag else None
+            image_url = image_tag['src'] if image_tag and 'src' in image_tag.attrs else ''
+
+            if title and price and url:
+                products.append({
+                    'title': title,
+                    'price': price,
+                    'url': url,
+                    'image': image_url
+                })
+        return products
+
     def search_marketplace(self, query: str, marketplace: str, exclude_marketplace: str = None) -> list:
         """Search for products on a specific marketplace."""
         if marketplace == exclude_marketplace:
@@ -215,21 +313,32 @@ class PriceScraper:
             time.sleep(random.uniform(1, 3))
             
             # Get search results content
-            content = get_website_text_content(search_url)
-            
+            if marketplace in ['jbhifi_au', 'thegoodguys_au', 'target_au', 'amazon', 'target', 'mydeal_au']:
+                content = get_website_text_content(search_url, use_selenium=True)
+            else:
+                content = get_website_text_content(search_url)
+
             if not content:
                 print(f"No content retrieved from {marketplace}")
                 return []
-            
-            # Extract product information
-            products = self.extract_product_info_from_search(content, clean_query)
-            
+
+            # Extract product information based on marketplace
+            if marketplace == 'jbhifi_au':
+                products = self._scrape_jbhifi(content)
+            elif marketplace == 'thegoodguys_au':
+                products = self._scrape_thegoodguys(content)
+            else:
+                products = self.extract_product_info_from_search(content, clean_query, marketplace)
+
             # Add marketplace info to products
             for product in products:
                 product['marketplace'] = marketplace
-                product['url'] = search_url
-                product['image'] = ''  # Would need more sophisticated extraction
-            
+                # The URL is already absolute if extracted by _scrape_jbhifi or _scrape_thegoodguys or extract_product_info_from_search
+                # If not, it needs to be made absolute here.
+                if not product.get('url') or not product['url'].startswith(('http://', 'https://')):
+                    product['url'] = urljoin(self.marketplaces[marketplace]['base_url'], product.get('url', ''))
+                product['image'] = ''  # Placeholder, needs more sophisticated extraction
+
             print(f"Found {len(products)} products on {marketplace}")
             return products[:3]  # Limit to top 3 results
             
@@ -268,7 +377,7 @@ class PriceScraper:
         }
         
         # Get relevant marketplaces to search
-        relevant_marketplaces = self.get_relevant_marketplaces(current_marketplace)
+        relevant_marketplaces = [m for m in self.get_relevant_marketplaces(current_marketplace) if m not in ['ebay', 'ebay_au', 'walmart', 'mydeal_au']]
         
         # Search relevant marketplaces except the current one
         for marketplace in relevant_marketplaces:
@@ -278,8 +387,13 @@ class PriceScraper:
                     marketplace, 
                     current_marketplace
                 )
-                results['results'].extend(products)
+                print(f"Raw products found for {marketplace}: {products}") # Debug print
+                # Find the best match from the scraped products for this marketplace
+                best_match_for_marketplace = self._find_best_match(products, product_title)
+                print(f"Best match for {marketplace}: {best_match_for_marketplace}") # Debug print
+                results['results'].extend(best_match_for_marketplace)
         
+        print(f"Final results before returning: {results['results']}") # Debug print
         # Sort results by price (if available)
         def sort_key(product):
             try:
@@ -291,6 +405,51 @@ class PriceScraper:
         results['results'].sort(key=sort_key)
         
         return results
+
+    def _find_best_match(self, products: list, query: str) -> list:
+        """Finds the best matching product from a list based on query similarity."""
+        if not products:
+            return []
+
+        # Simple approach: prioritize exact title match or high similarity
+        best_match = None
+        highest_similarity = 0.0
+
+        cleaned_query = self.clean_product_title(query) # Clean the query once
+        print(f"_find_best_match: Cleaned Query: {cleaned_query}") # Debug print
+
+        for product in products:
+            product_title = self.clean_product_title(product.get('title', '')) # Clean product title
+            print(f"_find_best_match: Comparing with Product Title: {product_title}") # Debug print
+
+            # Prioritize exact match
+            if cleaned_query == product_title:
+                print(f"_find_best_match: Exact match found: {product_title}") # Debug print
+                return [product] # Return immediately if exact match found
+
+            # Calculate similarity (e.g., using Jaccard index or simple word overlap)
+            # For simplicity, let's use word overlap for now
+            query_words = set(cleaned_query.split())
+            product_words = set(product_title.split())
+            
+            common_words = len(query_words.intersection(product_words))
+            total_words = len(query_words.union(product_words))
+            
+            if total_words > 0:
+                similarity = common_words / total_words
+            else:
+                similarity = 0.0
+            print(f"_find_best_match: Similarity: {similarity}") # Debug print
+
+            if similarity > highest_similarity:
+                highest_similarity = similarity
+                best_match = product
+        
+        print(f"_find_best_match: Best match found (before threshold): {best_match} with similarity {highest_similarity}") # Debug print
+        if best_match and highest_similarity >= 0.3: # Lowered threshold for testing
+            return [best_match]
+        else:
+            return [] # No good match found
 
 
 def search_product_prices(product_title: str, current_marketplace: str = None, current_price: str = None) -> dict:

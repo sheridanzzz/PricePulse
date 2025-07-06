@@ -1,3 +1,44 @@
+
+
+
+
+
+  function getMarketplaceName(marketplace) {
+  const names = {
+    'amazon': 'Amazon US', 'amazon_au': 'Amazon AU', 'amazon_uk': 'Amazon UK',
+    'ebay': 'eBay US', 'ebay_au': 'eBay AU', 'walmart': 'Walmart', 'target': 'Target US',
+    'target_au': 'Target AU', 'jbhifi_au': 'JB Hi-Fi', 'thegoodguys_au': 'The Good Guys',
+    'mydeal_au': 'MyDeal'
+  };
+  return names[marketplace] || marketplace.replace(/_au$/, '').replace(/_/g, ' ').toUpperCase();
+}
+
+const marketplaceLogos = {
+  'amazon': 'icons/amazon_logo.png',
+  'amazon_au': 'icons/amazon_au_logo.png',
+  'ebay': 'icons/ebay_logo.png',
+  'ebay_au': 'icons/ebay_au_logo.png',
+  'walmart': 'icons/walmart_logo.png',
+  'target': 'icons/target_logo.png',
+  'target_au': 'icons/target_au_logo.png',
+  'jbhifi_au': 'icons/jbhifi_au_logo.png',
+  'thegoodguys_au': 'icons/thegoodguys_au_logo.png',
+  'mydeal_au': 'icons/mydeal_au_logo.png'
+};
+
+function getMarketplaceLogo(marketplace) {
+  return marketplaceLogos[marketplace] || '';
+}
+
+function parsePrice(priceStr) {
+  if (!priceStr) return 0;
+  const match = priceStr.match(/[\d,]+\.?\d*/);
+  if (match) {
+    return parseFloat(match[0].replace(/,/g, ''));
+  }
+  return 0;
+}
+
 document.addEventListener('DOMContentLoaded', async function() {
   const loadingEl = document.getElementById('loading');
   const errorEl = document.getElementById('error');
@@ -6,41 +47,106 @@ document.addEventListener('DOMContentLoaded', async function() {
   const comparisonResultsEl = document.getElementById('comparison-results');
   
   try {
-    // Show loading state
     showLoading();
+    console.log('[PricePulse-Popup] Popup opened, checking for product data');
     
-    // Get current tab
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    console.log('[PricePulse-Popup] Current tab ID:', tab.id);
     
-    // Check if we have stored product data for this tab
-    const result = await chrome.storage.local.get([`product_${tab.id}`]);
-    const productData = result[`product_${tab.id}`];
+    const storageKey = `product_${tab.id}`;
+    const result = await chrome.storage.local.get([storageKey]);
+    const productData = result[storageKey];
+    
+    console.log('[PricePulse-Popup] Product data from storage:', productData);
     
     if (!productData) {
+      console.log('[PricePulse-Popup] No product data found in storage, showing no-product message');
       showNoProduct();
       return;
     }
     
-    // Display current product
     displayCurrentProduct(productData);
     
-    // Fetch price comparison data
-    const comparisonData = await fetchPriceComparison(productData);
+    showLoading('Searching for better prices...');
     
-    if (comparisonData && comparisonData.length > 0) {
-      displayComparisonResults(comparisonData, productData.price);
+    // Request comparison data from background script
+    const comparisonResponse = await chrome.runtime.sendMessage({
+      action: 'fetchComparison',
+      productData: productData
+    });
+
+    if (comparisonResponse.error) {
+      showError(`Failed to fetch comparison data: ${comparisonResponse.error}`);
+      return;
+    }
+    
+    if (comparisonResponse.results && comparisonResponse.results.length > 0) {
+      console.log('[PricePulse-Popup] Found', comparisonResponse.results.length, 'comparison results');
+      displayComparisonResults(comparisonResponse.results, productData.price);
     } else {
-      showError('No comparison data found for this product.');
+      console.log('[PricePulse-Popup] No comparison data found, showing current product only');
+      hideOtherSections(['current-product']);
+      
+      const noResultsMsg = document.createElement('div');
+      noResultsMsg.className = 'alert alert-info m-3';
+      noResultsMsg.innerHTML = '<i class="fas fa-info-circle me-2"></i>No similar products found on other marketplaces.';
+      document.querySelector('.container-fluid').appendChild(noResultsMsg);
     }
     
   } catch (error) {
-    console.error('Popup error:', error);
+    console.error('[PricePulse-Popup] Popup error:', error);
     showError('Failed to load price comparison data.');
   }
 });
 
-function showLoading() {
-  document.getElementById('loading').style.display = 'block';
+// Add retry button functionality
+document.addEventListener('click', async function(e) {
+  if (e.target.id === 'retry-detection' || e.target.closest('#retry-detection')) {
+    console.log('[PricePulse-Popup] Retry button clicked');
+    
+    showLoading('Retrying product detection...');
+    
+    try {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      
+      // Execute content script manually to re-extract product data
+      await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        function: () => {
+          if (typeof window.performExtraction === 'function') {
+            window.performExtraction();
+          } else {
+            console.log('[PricePulse] Content script not available for manual trigger');
+          }
+        }
+      });
+      
+      // Wait a bit then check storage
+      setTimeout(async () => {
+        const storageKey = `product_${tab.id}`;
+        const result = await chrome.storage.local.get([storageKey]);
+        
+        if (result[storageKey]) {
+          location.reload(); // Reload popup to show data
+        } else {
+          showError('Still no product detected. Make sure you are on a product page.');
+        }
+      }, 3000);
+      
+    } catch (error) {
+      console.error('[PricePulse-Popup] Retry error:', error);
+      showError('Failed to retry detection.');
+    }
+  }
+});
+
+function showLoading(message = 'Searching for better prices...') {
+  const loadingEl = document.getElementById('loading');
+  const loadingText = loadingEl.querySelector('p');
+  if (loadingText) {
+    loadingText.textContent = message;
+  }
+  loadingEl.style.display = 'block';
   hideOtherSections(['loading']);
 }
 
@@ -73,63 +179,18 @@ function displayCurrentProduct(productData) {
   document.getElementById('current-product').style.display = 'block';
 }
 
-function getMarketplaceName(marketplace) {
-  const names = {
-    'amazon': 'Amazon US',
-    'amazon_au': 'Amazon AU',
-    'amazon_uk': 'Amazon UK',
-    'amazon_ca': 'Amazon CA',
-    'amazon_de': 'Amazon DE',
-    'ebay': 'eBay US',
-    'ebay_au': 'eBay AU',
-    'ebay_uk': 'eBay UK',
-    'ebay_ca': 'eBay CA',
-    'walmart': 'Walmart',
-    'target': 'Target US',
-    'target_au': 'Target AU'
-  };
-  return names[marketplace] || marketplace;
-}
-
-async function fetchPriceComparison(productData) {
-  try {
-    const response = await fetch('http://localhost:8000/compare-prices', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        title: productData.title,
-        currentMarketplace: productData.marketplace,
-        currentPrice: productData.price
-      })
-    });
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    return data.results || [];
-  } catch (error) {
-    console.error('Price comparison fetch error:', error);
-    return [];
-  }
-}
-
 function displayComparisonResults(results, currentPrice) {
   const resultsListEl = document.getElementById('results-list');
   resultsListEl.innerHTML = '';
   
-  // Parse current price for comparison
   const currentPriceNum = parsePrice(currentPrice);
   let bestPrice = currentPriceNum;
   let bestResult = null;
   
   results.forEach(result => {
-    const resultPriceNum = parsePrice(result.price);
-    if (resultPriceNum > 0 && resultPriceNum < bestPrice) {
-      bestPrice = resultPriceNum;
+    const resultPrice = parsePrice(result.price);
+    if (resultPrice > 0 && resultPrice < bestPrice) {
+      bestPrice = resultPrice;
       bestResult = result;
     }
     
@@ -137,7 +198,6 @@ function displayComparisonResults(results, currentPrice) {
     resultsListEl.appendChild(resultEl);
   });
   
-  // Show best deal info if found
   if (bestResult && bestPrice < currentPriceNum) {
     showBestDeal(bestResult, currentPriceNum - bestPrice);
   }
@@ -157,37 +217,42 @@ function createResultElement(result, currentPrice) {
     if (resultPrice < currentPrice) {
       priceClass = 'lower';
       const savings = currentPrice - resultPrice;
-      savingsEl = `<span class="savings ms-2">Save $${savings.toFixed(2)}</span>`;
-      resultEl.classList.add('best-price');
+      savingsEl = `<span class="badge bg-success ms-2">Save ${savings.toFixed(2)}</span>`;
+      resultEl.classList.add('border-success');
     } else if (resultPrice > currentPrice) {
       priceClass = 'higher';
     }
   }
   
-  resultEl.className = 'result-item';
+  resultEl.className = 'card mb-2';
   resultEl.innerHTML = `
-    <div class="row align-items-center">
-      <div class="col-3">
-        <img src="${result.image || ''}" alt="Product" class="img-fluid">
-      </div>
-      <div class="col-9">
-        <div class="d-flex justify-content-between align-items-start mb-2">
-          <span class="badge marketplace-badge bg-secondary">${getMarketplaceName(result.marketplace)}</span>
-          <div class="text-end">
-            <div class="price ${priceClass}">${result.price}${savingsEl}</div>
-          </div>
+    <div class="card-body p-2">
+      <div class="row align-items-center">
+        <div class="col-3 text-center">
+          ${result.image ? `<img src="${result.image}" alt="Product Image" class="img-fluid rounded">` : '<i class="fas fa-image fa-2x text-muted"></i>'}
         </div>
-        <p class="mb-1 small">${result.title}</p>
-        ${result.availability ? `<p class="availability mb-1">${result.availability}</p>` : ''}
-        <a href="${result.url}" target="_blank" class="external-link">
-          <i class="fas fa-external-link-alt me-1"></i>View on ${getMarketplaceName(result.marketplace)}
-        </a>
+        <div class="col-9">
+          <h6 class="mb-1 small">${result.title}</h6>
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              ${getMarketplaceLogo(result.marketplace) ? `<img src="${getMarketplaceLogo(result.marketplace)}" alt="${getMarketplaceName(result.marketplace)} Logo" class="marketplace-logo-small me-1">` : ''}
+              <span class="badge bg-secondary">${getMarketplaceName(result.marketplace)}</span>
+            </div>
+            <strong class="text-primary">${result.price}</strong>
+            ${savingsEl}
+          </div>
+          <a href="${result.url}" target="_blank" class="btn btn-sm btn-outline-primary mt-1 w-100">
+            View Deal <i class="fas fa-external-link-alt ms-1"></i>
+          </a>
+        </div>
       </div>
     </div>
   `;
   
-  resultEl.addEventListener('click', () => {
-    chrome.tabs.create({ url: result.url });
+  resultEl.addEventListener('click', (e) => {
+    if (!e.target.closest('a')) { // Only open URL if not clicking on the link itself
+      window.open(result.url, '_blank');
+    }
   });
   
   return resultEl;
@@ -196,18 +261,8 @@ function createResultElement(result, currentPrice) {
 function showBestDeal(bestResult, savings) {
   const savingsInfo = document.getElementById('savings-info');
   savingsInfo.innerHTML = `
-    Save $${savings.toFixed(2)} at ${getMarketplaceName(bestResult.marketplace)}
+    Save ${savings.toFixed(2)} at ${getMarketplaceName(bestResult.marketplace)}
     <br><small>${bestResult.title}</small>
   `;
   document.getElementById('best-deal').style.display = 'block';
-}
-
-function parsePrice(priceStr) {
-  if (!priceStr) return 0;
-  // Extract numeric value from price string
-  const match = priceStr.match(/[\d,]+\.?\d*/);
-  if (match) {
-    return parseFloat(match[0].replace(/,/g, ''));
-  }
-  return 0;
 }
